@@ -1,0 +1,13 @@
+# Ferramentas/sessão (não fazem parte do projeto)
+.claude/
+scratch/
+insights-projeto1-nlp.md
+.DS_Store
+
+# Dados grandes/regeneráveis (ver src/README.md)
+data/external/mesh/
+data/interim/
+
+# Python
+__pycache__/
+*.pyc
