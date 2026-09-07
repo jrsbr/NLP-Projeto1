@@ -126,13 +126,14 @@ class _CaseBuilder:
         )
         self.add_edge(patient_id, node_id, "HAS_HISTORY")
 
-    def create_finding(self, exam_node_id: str, relation: str, text: str) -> None:
+    def create_finding(self, exam_node_id: str, relation: str, text: str) -> str:
         self.counters["F"] += 1
         node_id = f"{self.case_id}_F{self.counters['F']}"
         self.graph.nodes.append(
             {"node_id": node_id, "case_id": self.case_id, "type": "Finding", "label": text, "attributes": ""}
         )
         self.add_edge(exam_node_id, node_id, relation)
+        return node_id
 
     def create_exam_result(self, exam_node_id: str, result: dict) -> str:
         self.counters.setdefault("R", 0)
@@ -171,6 +172,8 @@ def _process_sentence(sentence: str, sent_idx: int, gazetteers: dict[str, Gazett
     exam_queue: list[EntityMatch] = []
     sentence_diagnosis_ids: list[str] = []
     sentence_symptom_ids: list[str] = []
+    sentence_treatment_ids: list[str] = []
+    sentence_anatomical_site_ids: list[str] = []
 
     # Passada 1: tudo que não é exam/reclassificado-como-exam.
     for i, m in enumerate(matches):
@@ -194,19 +197,33 @@ def _process_sentence(sentence: str, sent_idx: int, gazetteers: dict[str, Gazett
             builder.last_diagnosis_id = node_id
         elif m.entity_type == "symptom":
             sentence_symptom_ids.append(node_id)
-        elif m.entity_type == "treatment" and builder.last_diagnosis_id and created:
-            builder.add_edge(builder.last_diagnosis_id, node_id, "TREATED_BY")
+        elif m.entity_type == "anatomical_site":
+            sentence_anatomical_site_ids.append(node_id)
+        elif m.entity_type == "treatment":
+            sentence_treatment_ids.append(node_id)
+            if builder.last_diagnosis_id and created:
+                builder.add_edge(builder.last_diagnosis_id, node_id, "TREATED_BY")
 
     # SUPPORTS: sintoma que co-ocorre na mesma sentença com um diagnóstico.
     for diag_id in sentence_diagnosis_ids:
         for symptom_id in sentence_symptom_ids:
             builder.add_edge(symptom_id, diag_id, "SUPPORTS")
 
+    # AnatomicalSite: mesma regra de co-ocorrência na sentença, ligando quem
+    # menciona um local do corpo junto de um diagnóstico/tratamento.
+    for as_id in sentence_anatomical_site_ids:
+        for diag_id in sentence_diagnosis_ids:
+            builder.add_edge(diag_id, as_id, "LOCATED_IN")
+        for treat_id in sentence_treatment_ids:
+            builder.add_edge(treat_id, as_id, "TARGETS")
+
     # Passada 2: exam (original + reclassificado) -> ExamResult / Finding / CONFIRMS-EXCLUDES-REVEALS.
     for m in exam_queue:
         node_id, created = builder.get_or_create_entity("exam", m.canonical_label, m.match_kind, m.distance)
         if created:
             builder.add_edge(patient_id, node_id, "UNDERWENT_EXAM")
+        for as_id in sentence_anatomical_site_ids:
+            builder.add_edge(node_id, as_id, "PERFORMED_ON")
 
         result = build_exam_result(m, value_units)
         if result:
@@ -223,7 +240,9 @@ def _process_sentence(sentence: str, sent_idx: int, gazetteers: dict[str, Gazett
             if target_id:
                 builder.add_edge(node_id, target_id, finding["relation"])
             continue
-        builder.create_finding(node_id, finding["relation"], finding["finding_text"])
+        finding_node_id = builder.create_finding(node_id, finding["relation"], finding["finding_text"])
+        for as_id in sentence_anatomical_site_ids:
+            builder.add_edge(finding_node_id, as_id, "LOCATED_IN")
 
 
 def build_case_graph(

@@ -88,9 +88,13 @@ nós + arestas do enunciado):
 **Arestas** (`edge_id`, `case_id`, `source_id`, `target_id`, `relation`,
 `attributes`) — relações usadas: `HAS_HISTORY`, `PRESENTS_WITH`,
 `UNDERWENT_EXAM`, `UNDERWENT_TREATMENT`, `HAS_RESULT`, `HAS_UNIT`,
-`DIAGNOSED_WITH`, `SUPPORTS`, `TREATED_BY`, `CONFIRMS`/`EXCLUDES`/`REVEALS`.
-`Unit` é compartilhado entre casos (mesma unidade em casos diferentes
-aponta pro mesmo nó). Valor e faixa de referência ficam como texto em
+`DIAGNOSED_WITH`, `SUPPORTS`, `TREATED_BY`, `CONFIRMS`/`EXCLUDES`/`REVEALS`,
+`LOCATED_IN`/`TARGETS`/`PERFORMED_ON` (ligam `AnatomicalSite` a
+Diagnosis/Finding, Treatment e Exam por co-ocorrência na mesma sentença —
+mesma regra de proximidade do `SUPPORTS`/`TREATED_BY`, sem isso o
+`AnatomicalSite` ficava totalmente isolado no grafo). `Unit` é
+compartilhado entre casos (mesma unidade em casos diferentes aponta pro
+mesmo nó). Valor e faixa de referência ficam como texto em
 `attributes` do `ExamResult`, não como nós/arestas próprios — decomposição
 mínima o suficiente pra responder as análises propostas, sem inflar o
 grafo.
@@ -146,8 +150,9 @@ Diagnosis 137, ExamResult 91, Finding 89, Patient 56, History 43,
 Unit 18 — total 1593 (média de 28 nós/caso).
 
 **Arestas**: UNDERWENT_EXAM 274, UNDERWENT_TREATMENT 249, PRESENTS_WITH 237,
-TREATED_BY 179, DIAGNOSED_WITH 137, REVEALS 93, HAS_RESULT 91, HAS_UNIT 91,
-SUPPORTS 58, HAS_HISTORY 43, CONFIRMS 15, EXCLUDES 4 — total 1471.
+PERFORMED_ON 216, TARGETS 197, TREATED_BY 179, LOCATED_IN 173,
+DIAGNOSED_WITH 137, REVEALS 93, HAS_RESULT 91, HAS_UNIT 91, SUPPORTS 58,
+HAS_HISTORY 43, CONFIRMS 15, EXCLUDES 4 — total 2057.
 
 > Incluir capturas de tela da aplicação de visualização (`assets/images/`).
 
@@ -180,6 +185,12 @@ conhecida em vez de mais heurística de código:
   `config.py`): é uma lista curada à mão a partir do que apareceu na
   amostra — não é exaustiva, outros casos de palavra comum colidindo com
   descritor MeSH genérico podem aparecer em texto novo.
+- **`AnatomicalSite` só liga a algo quando co-ocorre na mesma sentença**
+  com Diagnosis/Exam/Treatment (`LOCATED_IN`/`PERFORMED_ON`/`TARGETS`) —
+  ~49% dos 399 nós desse tipo na amostra ainda ficam sem aresta (menção
+  solta, sem outra entidade na mesma sentença). Mesma limitação inerente
+  do `SUPPORTS`/`TREATED_BY`: regra de proximidade textual, não relação
+  semântica de verdade.
 
 ## Como Modelos de Linguagem foram Usados
 
