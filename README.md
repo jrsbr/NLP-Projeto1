@@ -1,206 +1,177 @@
-# Projeto `<Título em Português>`
-# Project `<Title in English>`
+# Projeto `NLP-Projeto 1`
+# Project `NLP-Projeto 1`
 
 > Equipe: `<Nome 1>`, `<Nome 2>`
 
 ## Slides
 
-> Coloque aqui o link para o PDF da apresentação (pasta `assets/slides/`).
+> Link para o PDF da apresentação (pasta `assets/slides/`).
 
 ## Metodologia
 
-O grafo de conhecimento é extraído em um pipeline baseado 100% em técnicas
-clássicas de NLP (nenhum modelo de linguagem é usado nesta etapa):
+Pipeline 100% baseado em técnicas clássicas de NLP — sem modelo de
+linguagem nesta etapa:
 
 ```
-cases.csv ──▶ pré-processamento ──▶ NER por gazetteer (MeSH) ──▶ extração de   ──▶ regras de   ──▶ grafo canônico
-              (segmentação de       exato (Aho-Corasick) +        valores/unidades   relação        (nós + arestas)
-              sentenças, regex)     fuzzy (Damerau-Levenshtein    (regex + lista
-                                    + BK-tree) p/ Symptom/Exam/    de unidades)
-                                    AnatomicalSite; exato só p/
-                                    Diagnosis/Treatment
+cases.csv → segmentação de sentenças → NER por gazetteer → valor/unidade → regras de relação → grafo (nós + arestas)
 ```
 
-Pontos-chave da abordagem:
+**1. Segmentação de sentenças** — regex simples (pontuação seguida de
+maiúscula), sem tokenizador externo.
 
-- **Fonte do vocabulário — MeSH (Medical Subject Headings)**: um único
-  descriptor file público da NLM (`desc2025.xml`, sem necessidade de
-  cadastro/licença, ao contrário de UMLS/SNOMED CT) filtrado por prefixo de
-  `TreeNumber` gera 5 gazetteers (`references/vocabularies/*.csv`):
-  Symptom (`C23`), Diagnosis (`C*` exceto `C23`), Exam (`E01`),
-  Treatment/Drug (`D*` + `E02`), AnatomicalSite (`A*`). Cada descritor MeSH
-  já vem com sinônimos prontos (*Entry Terms*), resolvendo a unificação de
-  diferentes formas de escrever o mesmo conceito. Bônus: como
-  `metadata.csv` já rotula os artigos com `major_mesh_terms`, dá pra
-  validar as entidades extraídas contra essa anotação externa.
-- **Dicionário enxuto**: cada descritor MeSH carrega ~8-9 Entry Terms, mas a
-  maioria é grafia rara/histórica. Mantemos só os marcados
-  `ConceptPreferredTermYN="Y"` — reduz o total de termos de ~265 mil pra
-  ~61 mil (~4.3x menor) sem colapsar pra um nome só por descritor.
-- **NER exato via Aho-Corasick**: mesmo já reduzido, dicionário desse
-  tamanho (Treatment sozinho ainda tem ~27 mil sinônimos, vindos do ramo
-  "Chemicals and Drugs" do MeSH) não escala com um `re.compile` por
-  sinônimo contra cada sentença — trocamos por um autômato de Aho-Corasick
-  por tipo de entidade, que casa todos os padrões em uma única varredura
-  O(tamanho do texto).
-- **NER fuzzy via Damerau-Levenshtein + BK-tree**, só para Symptom/Exam/
-  AnatomicalSite: cobre pequena variação de escrita (ex. "heart-attack" vs
-  "heart attack") com uma distância de edição normalizada pelo tamanho do
-  termo. Usa a variante **irrestrita** (não OSA) do algoritmo, condição
-  necessária pra poda de BK-tree ser válida (desigualdade triangular).
-  Desativado para Diagnosis/Treatment: medido empiricamente que a BK-tree
-  poda mal em dicionário médico de dezenas/centenas de milhares de termos
-  (distâncias de edição concentradas em valores baixos e próximos entre
-  si), tornando o fuzzy inviável nessa escala — mitigado pela cobertura já
-  ampla de Entry Terms do MeSH nesses dois ramos.
-- **Extração de valores/unidades por regex**: construída dinamicamente a
-  partir de uma lista controlada de unidades (`units.txt`, sem fuzzy —
-  erro aqui gera falso positivo fácil), reconhecendo também faixas de
-  referência (`reference range X-Y`).
+**2. NER por gazetteer** — fonte: [MeSH](https://www.nlm.nih.gov/mesh/)
+(*Medical Subject Headings*), vocabulário médico público da NLM,
+organizado em árvore por código (`TreeNumber`). O *descriptor file*
+oficial (`desc2025.xml`) é filtrado por prefixo de código pra gerar os
+dicionários. Cada descritor já vem com sinônimos prontos (*Entry Terms* —
+variações de escrita do mesmo conceito, ex. "heart attack" = "myocardial
+infarction"); mantemos só o termo preferido de cada conceito (atributo
+`ConceptPreferredTermYN` do XML), o que reduz o dicionário ~4x sem perder
+cobertura real de sinônimo.
 
-Trecho de código ilustrando a distância de edição usada no fuzzy match:
+Casamento contra o texto em duas fases:
+- **Exato**, via **Aho-Corasick** — autômato que casa milhares de
+  sinônimos contra a sentença numa só varredura (testar um `regex` por
+  sinônimo não escala pra dicionários desse tamanho).
+- **Fuzzy**, via **distância de Damerau-Levenshtein** (nº mínimo de
+  edições — inserir, remover, substituir ou trocar posição de letras —
+  pra transformar uma palavra na outra) indexada numa **BK-tree**
+  (estrutura de busca que acha "palavras a distância X" sem comparar
+  contra o dicionário inteiro). Cobre variação leve de escrita (ex.
+  "heart-attack" vs "heart attack"). Só roda em Symptom/Exam/
+  AnatomicalSite — em Diagnosis/Treatment o dicionário é grande demais
+  pra essa busca ficar rápida (medido).
 
-~~~python
-def damerau_levenshtein(a: str, b: str) -> int:
-    """Distância irrestrita (Lowrance-Wagner) — necessária pra poda de
-    BK-tree ser válida; a variante OSA não satisfaz desigualdade triangular.
-    """
-    ...
-~~~
+**3. Valor + unidade** — regex construído a partir de uma lista curada de
+unidades (`units.txt`), sem fuzzy (erro aqui vira falso positivo fácil).
+Reconhece também faixa de referência (`reference range X-Y`).
+
+**4. Regras de relação** — co-ocorrência na mesma sentença + gatilho
+textual (tabela na seção seguinte).
+
+### Como cada entidade é extraída
+
+| Entidade | Técnica | Como funciona |
+|---|---|---|
+| `Patient` | Colunas estruturadas | `age`/`gender` já vêm prontos em `cases.csv` — sem NLP |
+| `Symptom` | Gazetteer MeSH (ramo `C23`), exato + fuzzy | Aho-Corasick + Damerau-Levenshtein/BK-tree |
+| `Diagnosis` | Gazetteer MeSH (ramo `C`, exceto `C23`), só exato | fuzzy desativado — dicionário grande demais |
+| `Exam` | Gazetteer MeSH (ramo `E01`), exato + fuzzy | igual Symptom |
+| `Treatment` | Gazetteer MeSH (ramos `D`+`E02`), só exato | igual Diagnosis |
+| `AnatomicalSite` | Gazetteer MeSH (ramo `A`), exato + fuzzy | igual Symptom |
+| `ExamResult` | Regex de valor+unidade | número+unidade logo após um `Exam` |
+| `Finding` | Gatilho textual (fallback) | sem valor numérico: texto perto do `Exam` após um gatilho ("showed"/"confirmed"/"excluded"...) que não bate com nenhum vocabulário |
+| `History` | Gatilho "history of" + reclassificação | Diagnosis/Symptom/Treatment mencionado após o gatilho vira histórico, não caso atual |
+| `Unit` | Lista curada manual, sem fuzzy | extraída junto do valor via regex |
+
+Regras de relação entre entidades:
+
+| Padrão no texto | Relação criada |
+|---|---|
+| Substância (ramo `D`) com valor logo depois, sem gatilho de administração | `Treatment` → reclassificado como `Exam` (ex. "Hemoglobin 9 g/dL" não é tratamento) |
+| Symptom/ExamResult + Diagnosis na mesma sentença | `SUPPORTS` |
+| Treatment após um Diagnosis | `TREATED_BY` |
+| AnatomicalSite + Diagnosis/Exam/Treatment na mesma sentença | `LOCATED_IN`/`PERFORMED_ON`/`TARGETS` |
 
 Código completo em [`src/kg_extraction/`](src/kg_extraction/) ([instruções de instalação/execução](src/README.md)).
 
-## Trabalhos Estudados
-
-> Debater brevemente outros trabalhos/abordagens pesquisados pela equipe
-> (ex.: outras extrações de KG a partir de casos clínicos, uso de UMLS/cTAKES/
-> MetaMap para linking terminológico, etc.).
-
 ## Modelo Lógico
 
-O grafo é representado em duas tabelas (esquema livre, mantendo a ideia de
-nós + arestas do enunciado):
+Grafo em duas tabelas (`node_id`/`case_id`/`type`/`label`/`attributes` e
+`edge_id`/`case_id`/`source_id`/`target_id`/`relation`/`attributes`).
 
-**Nós** (`node_id`, `case_id`, `type`, `label`, `attributes`) — tipos usados:
-`Patient`, `History`, `Symptom`, `Exam`, `ExamResult`, `Finding`,
-`Treatment`, `AnatomicalSite`, `Unit`.
+**Tipos de nó**: `Patient`, `History`, `Symptom`, `Exam`, `ExamResult`,
+`Finding`, `Treatment`, `AnatomicalSite`, `Unit`.
 
-**Arestas** (`edge_id`, `case_id`, `source_id`, `target_id`, `relation`,
-`attributes`) — relações usadas: `HAS_HISTORY`, `PRESENTS_WITH`,
-`UNDERWENT_EXAM`, `UNDERWENT_TREATMENT`, `HAS_RESULT`, `HAS_UNIT`,
-`DIAGNOSED_WITH`, `SUPPORTS`, `TREATED_BY`, `CONFIRMS`/`EXCLUDES`/`REVEALS`,
-`LOCATED_IN`/`TARGETS`/`PERFORMED_ON` (ligam `AnatomicalSite` a
-Diagnosis/Finding, Treatment e Exam por co-ocorrência na mesma sentença —
-mesma regra de proximidade do `SUPPORTS`/`TREATED_BY`, sem isso o
-`AnatomicalSite` ficava totalmente isolado no grafo). `Unit` é
-compartilhado entre casos (mesma unidade em casos diferentes aponta pro
-mesmo nó). Valor e faixa de referência ficam como texto em
-`attributes` do `ExamResult`, não como nós/arestas próprios — decomposição
-mínima o suficiente pra responder as análises propostas, sem inflar o
-grafo.
+**Relações**: `HAS_HISTORY`, `PRESENTS_WITH`, `UNDERWENT_EXAM`,
+`UNDERWENT_TREATMENT`, `HAS_RESULT`, `HAS_UNIT`, `DIAGNOSED_WITH`,
+`SUPPORTS`, `TREATED_BY`, `CONFIRMS`/`EXCLUDES`/`REVEALS`,
+`LOCATED_IN`/`TARGETS`/`PERFORMED_ON`. `Unit` é compartilhado entre casos
+(mesma unidade sempre aponta pro mesmo nó).
 
-> Decisão: não modelamos `VocabConcept`/`SAME_AS` (link de cada entidade
-> pro seu código MeSH) — testado e removido: quase dobrava o nº de nós/
-> arestas do grafo (~30%/45% do total) sem agregar valor pra um grafo
-> básico. O código MeSH de cada match ainda existe internamente (usado só
-> pra dedupe do gazetteer), só não vira nó.
+Valor e faixa de referência ficam como texto em `attributes` do
+`ExamResult` — não viram nó próprio (decomposição mínima o suficiente
+pras análises propostas, sem inflar o grafo).
 
-> Coloque aqui a imagem do modelo lógico de propriedades da equipe (ver
-> [modelo de base](https://docs.google.com/presentation/d/10RN7bDKUka_Ro2_41WyEE76Wxm4AioiJOrsh6BRY3Kk/edit?usp=sharing)),
+> Não modelamos `VocabConcept`/`SAME_AS` (link entidade→código MeSH):
+> testado e removido — quase dobrava nós/arestas do grafo sem agregar
+> valor num grafo básico.
+
+> Coloque aqui a imagem do modelo lógico (ver [modelo de
+> base](https://docs.google.com/presentation/d/10RN7bDKUka_Ro2_41WyEE76Wxm4AioiJOrsh6BRY3Kk/edit?usp=sharing))
 > em `assets/images/modelo-logico-grafos.png`.
 
 ## Análises que podem ser realizadas
 
-- Cruzar `major_mesh_terms` de `metadata.csv` com os `Diagnosis`/`Symptom`
-  extraídos (ambos vêm de MeSH) para validar a extração contra uma
-  anotação externa já existente no dataset.
-- Medir cobertura do gazetteer (quantas sentenças não geraram nenhuma
-  entidade) para orientar onde a taxonomia MeSH deixa lacunas (ex.: exames
-  específicos que o MeSH não descreve como procedimento isolado).
-- Comparar precisão de Symptom vs. Diagnosis: o ramo `C23` do MeSH inclui
-  uma subárvore de "Chronic Disease" que cross-lista doenças específicas,
-  gerando classificações de Diagnosis como Symptom — quantificar o
-  impacto disso na amostra.
-- Identificar quais `Exam` mais frequentemente co-ocorrem com cada
-  `Diagnosis`, sugerindo protocolos diagnósticos recorrentes.
-
-> Complementar com as análises efetivamente realizadas pela equipe.
+- Cruzar `major_mesh_terms` de `metadata.csv` com `Diagnosis`/`Symptom`
+  extraídos (ambos vêm de MeSH) para validar contra anotação externa.
+- Medir cobertura do gazetteer (sentenças sem nenhuma entidade) pra
+  achar lacunas da taxonomia MeSH.
+- Comparar precisão Symptom vs. Diagnosis — o ramo `C23` do MeSH tem uma
+  subárvore "Chronic Disease" que cross-lista doenças específicas como
+  se fossem sintomas.
+- `Exam`s que mais co-ocorrem com cada `Diagnosis`, sugerindo protocolos
+  diagnósticos recorrentes.
 
 ## Ferramentas
 
-- **Python** (pandas) para o pipeline de extração.
-- Técnicas clássicas de NLP implementadas from-scratch: tokenização/
-  normalização por regex, gazetteer com Aho-Corasick (exato) e
-  Damerau-Levenshtein + BK-tree (fuzzy), regex de valores/unidades, regras
-  de relação — sem bibliotecas de NER estatístico/neural, conforme
-  exigido nesta etapa.
-- **MeSH (NLM)** como fonte única de vocabulário controlado — público,
-  sem necessidade de licença/cadastro (ao contrário de UMLS/SNOMED CT).
-- Estrutura de projeto: [Cookiecutter Data Science](https://drivendata.github.io/cookiecutter-data-science/) (simplificada).
+- **Python** (pandas).
+- Técnicas clássicas de NLP from-scratch: regex, gazetteer com
+  Aho-Corasick + Damerau-Levenshtein/BK-tree, regras de relação — sem
+  bibliotecas de NER estatístico/neural, conforme exigido nesta etapa.
+- **MeSH (NLM)** como vocabulário controlado — público, sem
+  licença/cadastro (ao contrário de UMLS/SNOMED CT).
+- Estrutura de projeto: [Cookiecutter Data Science](https://drivendata.github.io/cookiecutter-data-science/) (template padrão pra organizar projetos de dados), simplificada.
 
 ## Resultados
 
-Pipeline completo rodado sobre os **56 casos / 50 artigos** da amostra
-oficial (`data/raw/multicare/cases.csv` — o enunciado cita "246 casos", mas
-o arquivo de amostra distribuído junto ao enunciado tem 56 linhas reais;
-`metadata.csv` bate certinho com "50 artigos"). Tempo total: ~2 minutos.
+Pipeline rodado sobre os **56 casos / 50 artigos** da amostra oficial
+(`data/raw/multicare/cases.csv` — o enunciado cita "246 casos", mas o
+arquivo de amostra distribuído tem 56 linhas reais; `metadata.csv` bate
+com "50 artigos"). ~2 minutos de processamento.
 
-**Nós**: AnatomicalSite 399, Exam 274, Treatment 249, Symptom 237,
-Diagnosis 137, ExamResult 91, Finding 89, Patient 56, History 43,
-Unit 18 — total 1593 (média de 28 nós/caso).
+**Nós** (1593 total): AnatomicalSite 399, Exam 274, Treatment 249,
+Symptom 237, Diagnosis 137, ExamResult 91, Finding 89, Patient 56,
+History 43, Unit 18.
 
-**Arestas**: UNDERWENT_EXAM 274, UNDERWENT_TREATMENT 249, PRESENTS_WITH 237,
-PERFORMED_ON 216, TARGETS 197, TREATED_BY 179, LOCATED_IN 173,
-DIAGNOSED_WITH 137, REVEALS 93, HAS_RESULT 91, HAS_UNIT 91, SUPPORTS 58,
-HAS_HISTORY 43, CONFIRMS 15, EXCLUDES 4 — total 2057.
+**Arestas** (2057 total): UNDERWENT_EXAM 274, UNDERWENT_TREATMENT 249,
+PRESENTS_WITH 237, PERFORMED_ON 216, TARGETS 197, TREATED_BY 179,
+LOCATED_IN 173, DIAGNOSED_WITH 137, REVEALS 93, HAS_RESULT 91,
+HAS_UNIT 91, SUPPORTS 58, HAS_HISTORY 43, CONFIRMS 15, EXCLUDES 4.
 
-> Incluir capturas de tela da aplicação de visualização (`assets/images/`).
+> Capturas de tela da visualização em `assets/images/`.
 
-### Limitações conhecidas (taxonomia MeSH)
+### Limitações conhecidas
 
-Usar MeSH como fonte única de vocabulário (ao invés de UMLS/SNOMED CT/
-RxNorm combinados) simplificou bastante a implementação, mas a árvore do
-MeSH não foi desenhada pra bater 1:1 com nossos 5 tipos de entidade.
-Achados concretos rodando na amostra real, deixados como limitação
-conhecida em vez de mais heurística de código:
+Usar MeSH sozinho (em vez de UMLS/SNOMED CT/RxNorm combinados)
+simplificou a implementação, mas sua árvore não bate 1:1 com nossos
+tipos de entidade:
 
-- **Ramo `C23` (Signs and Symptoms) é mais largo que "sintoma"**: tem uma
-  subárvore `Chronic Disease` que lista doenças crônicas específicas (ex.
-  "Pancreatitis, Chronic") como se fossem sintomas. Algumas entidades que
-  deveriam ser `Diagnosis` saem classificadas como `Symptom`.
-- **Corpos/fluidos ficam sob `AnatomicalSite`**: "serum", "tail" (do
-  ramo zoológico/anatômico geral do MeSH) casam tecnicamente certo com a
-  árvore, mas fora do sentido clínico que o texto pretendia.
-- **Cobertura de procedimento (`Exam`) tem buracos**: nem todo exame comum
-  em texto clínico é um descritor MeSH isolado no ramo `E01` (ex.
-  "Endoscopic ultrasound" sozinho não bate — só existe composto com
-  "-Guided Fine Needle Aspiration"). Sub-reporta exames quando o MeSH não
-  tem entrada específica.
-- **Ambiguidade residual em `Treatment`**: a reclassificação Treatment→Exam
-  (`relations.py`) resolve o caso claro de substância medida com valor
-  logo depois ("Hemoglobin 9 g/dL"), mas quando o valor não está adjacente
-  no texto a substância continua classificada como Treatment mesmo sendo
-  um biomarcador, não uma droga administrada.
+- **Ramo `C23`** é mais largo que "sintoma": tem subárvore "Chronic
+  Disease" que lista doenças específicas — algumas entidades que
+  deveriam ser `Diagnosis` saem como `Symptom`.
+- **Corpos/fluidos caem em `AnatomicalSite`**: "serum", "tail" batem
+  certo com a árvore, mas fora do sentido clínico do texto.
+- **Cobertura de `Exam` tem buracos**: nem todo exame comum tem
+  descritor MeSH isolado (ex. "endoscopic ultrasound" sozinho não bate).
+- **Ambiguidade residual em `Treatment`**: a reclassificação pra Exam só
+  funciona quando o valor está adjacente no texto.
 - **Termos genéricos além dos 3 já filtrados** (`EXCLUDED_MESH_UI` em
-  `config.py`): é uma lista curada à mão a partir do que apareceu na
-  amostra — não é exaustiva, outros casos de palavra comum colidindo com
-  descritor MeSH genérico podem aparecer em texto novo.
-- **`AnatomicalSite` só liga a algo quando co-ocorre na mesma sentença**
-  com Diagnosis/Exam/Treatment (`LOCATED_IN`/`PERFORMED_ON`/`TARGETS`) —
-  ~49% dos 399 nós desse tipo na amostra ainda ficam sem aresta (menção
-  solta, sem outra entidade na mesma sentença). Mesma limitação inerente
-  do `SUPPORTS`/`TREATED_BY`: regra de proximidade textual, não relação
+  `config.py`): lista curada à mão, não exaustiva.
+- **`AnatomicalSite` só liga a algo por co-ocorrência na sentença**: ~49%
+  dos 399 nós ainda ficam sem aresta (menção solta, sem outra entidade
+  na mesma sentença) — regra de proximidade textual, não relação
   semântica de verdade.
 
 ## Como Modelos de Linguagem foram Usados
 
-Conforme o enunciado, **nenhum LLM foi usado na etapa de extração do grafo**
-(NER, extração de valores e extração de relações são 100% baseadas em
-regras, dicionários MeSH e regex — ver `src/kg_extraction/features/`).
+Conforme o enunciado, **nenhum LLM foi usado na etapa de extração do
+grafo** (NER, valores e relações são 100% regras/dicionário/regex — ver
+`src/kg_extraction/features/`).
 
 Modelos de linguagem foram usados apenas para:
-- Apoiar o design e a implementação da **aplicação web de visualização**,
-  que o enunciado explicitamente libera para uso de IA;
+- Apoiar o design e implementação da **aplicação web de visualização**,
+  que o enunciado libera explicitamente para uso de IA;
 - `<a equipe deve completar aqui outros usos, ex.: revisão de texto, geração
   de rascunho dos slides, etc.>`
 
