@@ -1,6 +1,7 @@
 # Projeto `Grafo de Conhecimento a partir de Casos Clínicos`
+# Project `Knowledge Graph from Clinical Case Reports`
 
-> Equipe: Mateus Farha, Lucas Lembo, Gustavo Rodrigues, Gabriela Coppo, João Azeredo
+**Equipe:** Mateus Farha, Lucas Lembo, Gustavo Rodrigues, Gabriela Coppo, João Azeredo
 
 ## Slides
 
@@ -260,7 +261,7 @@ que mediu `0.04 ng/mL`:
 
 Por isso `Unit` virou nó compartilhado entre casos (a mesma unidade sempre
 aponta para o mesmo nó, sem `case_id`), e valor e faixa de referência ficaram
-como texto em `attributes` do `ExamResult`. Decompor tudo não é obrigatório, pois0
+como texto em `attributes` do `ExamResult`. Decompor tudo não é obrigatório, pois
 inflaria o grafo sem responder nenhuma pergunta nova.
 
 ## Análises que podem ser realizadas
@@ -303,7 +304,7 @@ O pipeline rodou sobre os **56 casos / 50 artigos** da amostra
 
 ![Distribuição de nós e arestas](assets/images/distribuicao-grafo.png)
 
-O grafo final tem **1.593 nós e 2.057 arestas**. O que os números mostram:
+O grafo final tem **1.588 nós e 2.054 arestas**. O que os números mostram:
 
 - **`AnatomicalSite` é o tipo mais numeroso (399).** Quase toda frase clínica
   menciona uma parte do corpo, e o ramo `A` do MeSH é o de cobertura mais
@@ -313,7 +314,7 @@ O grafo final tem **1.593 nós e 2.057 arestas**. O que os números mostram:
   do texto: relato de caso é construído em cima da investigação diagnóstica,
   não do tratamento.
 - **Co-ocorrência anatômica responde por 28% do grafo.** `PERFORMED_ON`,
-  `TARGETS` e `LOCATED_IN` somam 586 das 2.057 arestas, ou seja, mais de um
+  `TARGETS` e `LOCATED_IN` somam 583 das 2.054 arestas, ou seja, mais de um
   quarto das ligações vem de proximidade no texto e não de evidência explícita.
 - **Os gatilhos de polaridade aparecem pouco.** `REVEALS` (neutro) tem 93
   arestas, contra 15 de `CONFIRMS` e 4 de `EXCLUDES`. Os relatos descrevem mais
@@ -330,7 +331,10 @@ intubation."*
 
 As linhas tracejadas que saem do paciente são a camada automática, onde o tipo do nó
 já diz qual é a relação. As linhas cheias são as inferidas pelas regras de
-co-ocorrência e gatilho. Ao todo, o caso tem 28 arestas.
+co-ocorrência e gatilho. A cor identifica o tipo do nó, conforme a legenda; o nome
+de cada relação foi omitido do desenho porque, num grafo desta densidade, o rótulo
+cai sobre o nome dos nós vizinhos, e o vocabulário de relações está na tabela da
+seção anterior. Ao todo, o caso tem 19 nós e 28 arestas.
 
 O caso mostra bem o que funciona e o que não funciona. Funcionam a cadeia
 `Troponin → 0.04 ng/mL → ng/ml` (exame, resultado e unidade compartilhada),
@@ -371,8 +375,13 @@ estão na mesma sentença do histórico.
   uma relação semântica de verdade.
 - **`Finding` guarda texto cru.** O trecho é recortado por janela de
   caracteres a partir do gatilho, então às vezes começa ou termina no meio de
-  uma palavra, e o mesmo achado pode aparecer duplicado quando dois exames
-  apontam para ele.
+  uma palavra.
+- **Arestas duplicadas.** Quando a mesma dupla de entidades reaparece em mais
+  de uma sentença do caso, a co-ocorrência registra a ligação outra vez: são
+  2.054 arestas gravadas contra 1.941 distintas. As 113 repetições concentram-se
+  justamente em `TARGETS`, `PERFORMED_ON` e `LOCATED_IN`, então o percentual de
+  co-ocorrência anatômica acima está contado sobre arestas gravadas, não
+  distintas.
 
 ## Como Modelos de Linguagem foram Usados
 

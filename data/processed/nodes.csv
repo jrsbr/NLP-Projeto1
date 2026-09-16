@@ -85,7 +85,6 @@ PMC7102447_01_S3,PMC7102447_01,Symptom,Cardiomegaly,match=exact; distance=0
 PMC7102447_01_E3,PMC7102447_01,Exam,Tomography,match=exact; distance=0
 PMC7102447_01_F1,PMC7102447_01,Finding,moderate patchy ground-glass and nodular airspace opacities,
 PMC7102447_01_E4,PMC7102447_01,Exam,Angiography,match=exact; distance=0
-PMC7102447_01_F2,PMC7102447_01,Finding,moderate patchy ground-glass and nodular airspace opacities,
 PMC7102447_01_D4,PMC7102447_01,Diagnosis,Thrombosis,match=exact; distance=0
 PMC7102447_01_T3,PMC7102447_01,Treatment,Warfarin,match=exact; distance=0
 PMC6354154_01_P1,PMC6354154_01,Patient,case PMC6354154_01,age=30.0; gender=Female
@@ -271,7 +270,6 @@ PMC5833205_01_AS3,PMC5833205_01,AnatomicalSite,Lower Gastrointestinal Tract,matc
 PMC5833205_01_E4,PMC5833205_01,Exam,Endoscopy,match=exact; distance=0
 PMC5833205_01_F4,PMC5833205_01,Finding,grossly normal appearing mucosa lining the upper and lower,
 PMC5833205_01_E5,PMC5833205_01,Exam,Colonoscopy,match=exact; distance=0
-PMC5833205_01_F5,PMC5833205_01,Finding,grossly normal appearing mucosa lining the upper and lower,
 PMC5833205_01_AS4,PMC5833205_01,AnatomicalSite,Eosinophils,match=exact; distance=0
 PMC5833205_01_S2,PMC5833205_01,Symptom,Inflammation,match=exact; distance=0
 PMC5833205_01_AS5,PMC5833205_01,AnatomicalSite,Esophagus,match=exact; distance=0
@@ -474,7 +472,6 @@ PMC9529523_01_E8,PMC9529523_01,Exam,Biopsy,match=exact; distance=0
 PMC9529523_01_E9,PMC9529523_01,Exam,Vital Capacity,match=exact; distance=0
 PMC9529523_01_F2,PMC9529523_01,Finding,"Further testing, including pulmonary function testing",
 PMC9529523_01_E10,PMC9529523_01,Exam,Forced Expiratory Volume,match=exact; distance=0
-PMC9529523_01_F3,PMC9529523_01,Finding,"Further testing, including pulmonary function testing",
 PMC9529523_01_T10,PMC9529523_01,Treatment,Carbon Monoxide,match=exact; distance=0
 PMC9529523_01_AS8,PMC9529523_01,AnatomicalSite,Lung,match=exact; distance=0
 PMC9529523_01_E11,PMC9529523_01,Exam,Tomography,match=exact; distance=0
@@ -483,13 +480,13 @@ PMC9529523_01_S7,PMC9529523_01,Symptom,Failure to Thrive,match=exact; distance=0
 PMC9529523_01_S8,PMC9529523_01,Symptom,Hypertrophy,match=exact; distance=0
 PMC9529523_01_E12,PMC9529523_01,Exam,Echocardiography,match=exact; distance=0
 PMC9529523_01_E13,PMC9529523_01,Exam,Magnetic Resonance Imaging,match=exact; distance=0
-PMC9529523_01_F4,PMC9529523_01,Finding,no evidence of infiltrative cardiomyopathy,
+PMC9529523_01_F3,PMC9529523_01,Finding,no evidence of infiltrative cardiomyopathy,
 PMC9529523_01_S9,PMC9529523_01,Symptom,Dyspnea,match=exact; distance=0
 PMC9529523_01_D4,PMC9529523_01,Diagnosis,Pericardial Effusion,match=exact; distance=0
 PMC9529523_01_E14,PMC9529523_01,Exam,Electrocardiography,match=exact; distance=0
-PMC9529523_01_F5,PMC9529523_01,Finding,"normal sinus rhythm with QT prolongation, QTc 527 ms, and a",
+PMC9529523_01_F4,PMC9529523_01,Finding,"normal sinus rhythm with QT prolongation, QTc 527 ms, and a",
 PMC9529523_01_E15,PMC9529523_01,Exam,Stroke Volume,match=exact; distance=0
-PMC9529523_01_F6,PMC9529523_01,Finding,"rolongation, QTc 527 ms, and a transthoracic echocardiogram",
+PMC9529523_01_F5,PMC9529523_01,Finding,"rolongation, QTc 527 ms, and a transthoracic echocardiogram",
 PMC9529523_01_E16,PMC9529523_01,Exam,Pericardiocentesis,match=exact; distance=0
 PMC9529523_01_R7,PMC9529523_01,ExamResult,860 ml,value=860
 PMC9529523_01_AS9,PMC9529523_01,AnatomicalSite,Heart,match=exact; distance=0
@@ -498,7 +495,7 @@ PMC9529523_01_D5,PMC9529523_01,Diagnosis,Myocarditis,match=exact; distance=0
 PMC9529523_01_AS10,PMC9529523_01,AnatomicalSite,Myelin Sheath,match=exact; distance=0
 PMC9529523_01_AS11,PMC9529523_01,AnatomicalSite,Mitochondria,match=exact; distance=0
 PMC9529523_01_E17,PMC9529523_01,Exam,Microscopy,match=exact; distance=0
-PMC9529523_01_F7,PMC9529523_01,Finding,n figures and enlarged mitochondria (Figures 1(a) and 1(b)),
+PMC9529523_01_F6,PMC9529523_01,Finding,n figures and enlarged mitochondria (Figures 1(a) and 1(b)),
 PMC9529523_01_R8,PMC9529523_01,ExamResult,274 ng/ml,value=274
 PMC9529523_01_T12,PMC9529523_01,Treatment,Prednisone,match=exact; distance=0
 PMC9532611_01_P1,PMC9532611_01,Patient,case PMC9532611_01,age=12.0; gender=Female
@@ -745,10 +742,9 @@ PMC10434843_01_AS18,PMC10434843_01,AnatomicalSite,Brain,match=exact; distance=0
 PMC10434843_01_AS19,PMC10434843_01,AnatomicalSite,Abdomen,match=exact; distance=0
 PMC10434843_01_E8,PMC10434843_01,Exam,Tomography,match=exact; distance=0
 PMC10434843_01_F6,PMC10434843_01,Finding,no indication of a tumor,
-PMC10434843_01_F7,PMC10434843_01,Finding,no indication of a tumor,
 PMC10434843_01_E9,PMC10434843_01,Exam,Hand Strength,match=exact; distance=0
 PMC10434843_01_AS20,PMC10434843_01,AnatomicalSite,Elbow,match=exact; distance=0
-PMC10434843_01_F8,PMC10434843_01,Finding,"In the follow-up, CASPR2 antibodies were",
+PMC10434843_01_F7,PMC10434843_01,Finding,"In the follow-up, CASPR2 antibodies were",
 PMC10434843_01_S6,PMC10434843_01,Symptom,Syndrome,match=exact; distance=0
 PMC10434843_01_D2,PMC10434843_01,Diagnosis,Amyotrophic Lateral Sclerosis,match=exact; distance=0
 PMC10434843_01_AS21,PMC10434843_01,AnatomicalSite,Neurons,match=fuzzy; distance=1
@@ -1137,7 +1133,6 @@ PMC3897989_01_AS6,PMC3897989_01,AnatomicalSite,Pancreas,match=exact; distance=0
 PMC3897989_01_E3,PMC3897989_01,Exam,Tomography,match=exact; distance=0
 PMC3897989_01_F3,PMC3897989_01,Finding,"diffusive enlargement of the pancreas, capsuled by an armor",
 PMC3897989_01_E4,PMC3897989_01,Exam,Magnetic Resonance Imaging,match=exact; distance=0
-PMC3897989_01_F4,PMC3897989_01,Finding,"diffusive enlargement of the pancreas, capsuled by an armor",
 PMC3897989_01_AS7,PMC3897989_01,AnatomicalSite,Bile,match=exact; distance=0
 PMC3897989_01_AS8,PMC3897989_01,AnatomicalSite,Gallbladder,match=exact; distance=0
 PMC3897989_01_S6,PMC3897989_01,Symptom,Atrophy,match=exact; distance=0
@@ -1163,7 +1158,7 @@ PMC3897989_01_D2,PMC3897989_01,Diagnosis,Herpes Zoster,match=exact; distance=0
 PMC3897989_01_T11,PMC3897989_01,Treatment,Acyclovir,match=exact; distance=0
 PMC3897989_01_AS14,PMC3897989_01,AnatomicalSite,Lung,match=exact; distance=0
 PMC3897989_01_AS15,PMC3897989_01,AnatomicalSite,Neutrophils,match=fuzzy; distance=1
-PMC3897989_01_F5,PMC3897989_01,Finding,neutrophil aggregation and fibrous effusion within the alve,
+PMC3897989_01_F4,PMC3897989_01,Finding,neutrophil aggregation and fibrous effusion within the alve,
 PMC3897989_01_S11,PMC3897989_01,Symptom,Abscess,match=exact; distance=0
 PMC3897989_01_T12,PMC3897989_01,Treatment,Moxifloxacin,match=exact; distance=0
 PMC3897989_01_T13,PMC3897989_01,Treatment,Thymosin,match=exact; distance=0

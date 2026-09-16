@@ -126,14 +126,25 @@ class _CaseBuilder:
         )
         self.add_edge(patient_id, node_id, "HAS_HISTORY")
 
-    def create_finding(self, exam_node_id: str, relation: str, text: str) -> str:
-        self.counters["F"] += 1
-        node_id = f"{self.case_id}_F{self.counters['F']}"
-        self.graph.nodes.append(
-            {"node_id": node_id, "case_id": self.case_id, "type": "Finding", "label": text, "attributes": ""}
-        )
+    def create_finding(self, exam_node_id: str, relation: str, text: str) -> tuple[str, bool]:
+        """Dedupe pelo texto, igual `get_or_create_entity` faz pelo label canônico.
+
+        Dois exames diferentes podem revelar o mesmo achado ("Tomography" e
+        "Angiography" apontando pro mesmo laudo); nesse caso o achado é um só, com
+        uma aresta de cada exame, e não dois nós de rótulo idêntico.
+        """
+        key = ("finding", text)
+        node_id = self.seen.get(key)
+        criado = node_id is None
+        if criado:
+            self.counters["F"] += 1
+            node_id = f"{self.case_id}_F{self.counters['F']}"
+            self.seen[key] = node_id
+            self.graph.nodes.append(
+                {"node_id": node_id, "case_id": self.case_id, "type": "Finding", "label": text, "attributes": ""}
+            )
         self.add_edge(exam_node_id, node_id, relation)
-        return node_id
+        return node_id, criado
 
     def create_exam_result(self, exam_node_id: str, result: dict) -> str:
         self.counters.setdefault("R", 0)
@@ -240,9 +251,10 @@ def _process_sentence(sentence: str, sent_idx: int, gazetteers: dict[str, Gazett
             if target_id:
                 builder.add_edge(node_id, target_id, finding["relation"])
             continue
-        finding_node_id = builder.create_finding(node_id, finding["relation"], finding["finding_text"])
-        for as_id in sentence_anatomical_site_ids:
-            builder.add_edge(finding_node_id, as_id, "LOCATED_IN")
+        finding_node_id, criado = builder.create_finding(node_id, finding["relation"], finding["finding_text"])
+        if criado:
+            for as_id in sentence_anatomical_site_ids:
+                builder.add_edge(finding_node_id, as_id, "LOCATED_IN")
 
 
 def build_case_graph(
