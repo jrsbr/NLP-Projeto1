@@ -15,9 +15,7 @@ de linguagem ou NER estatístico participa da extração.
 
 O pipeline tem 5 etapas:
 
-```
-cases.csv → segmentação de sentenças → NER por gazetteer → valor + unidade → regras de relação → grafo (nós + arestas)
-```
+![Fluxo do pipeline](assets/images/fluxo-pipeline.png)
 
 Cada caso chega como um parágrafo corrido em `case_text`. As colunas `age` e
 `gender` já vêm estruturadas e viram direto os atributos do nó `Patient`, sem NLP.
